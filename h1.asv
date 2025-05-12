@@ -1,0 +1,10 @@
+function [y] = h1(x, lower_bnd)
+%
+if x<lower_bnd
+    y = 0;
+elseif lower_bnd <= x && x <= lower_bnd + 0.01 
+    y = (1-2*(x-lower_bnd - 0.01)/(0.01)).*(x-lower_bnd).^2/(0.01)^2;
+else
+    y = ones(size(x));
+end
+end
