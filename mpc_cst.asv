@@ -1,0 +1,21 @@
+function [ieq_cst, eq_cst] = mpc_cst(config, ctl_seq, type_value_fun)
+%
+eq_cst=[];
+ieq_cst = zeros(max(2,config.num_rec_sat)*(config.num_sample+1),1);
+if type_value_fun == "V_T"
+    for i=1:config.T_sampling
+        ieq_cst(2*i-1) = norm(ctl_seq(1:config.ctl_dim,i)) - config.tgt_att_u_max;
+        ieq_cst(2*i) = norm(ctl_seq(config.ctl_dim+(1:config.ctl_dim), i))- ...
+            config.tgt_orb_u_max;
+    end
+else
+    for i=1:config.T_sampling
+        for j=1:config.num_rec_sat
+            ieq_cst() = norm(ctl_seq((j-1)*config.ctl_dim+(1:config.ctl_dim)...
+                ,i)) - config.rec_orb_u_max(j);
+        end
+    end
+
+end
+
+end
