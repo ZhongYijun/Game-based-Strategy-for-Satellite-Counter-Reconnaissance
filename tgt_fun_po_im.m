@@ -1,5 +1,5 @@
-function [tgt_fun_value] = tgt_fun_po_im(coeff, cur_state, config, his_obs,...
-    J2L_mat, theta_max, cur_ctl, type_value_fun)
+function [tgt_fun_value] = tgt_fun_po_im(coeff, cur_state, config, J2L_mat,...
+    theta_max, cur_ctl, lst_ctl, type_value_fun, unit_ball_sample, non_zero_count)
 % 
 [trans_mat, cur_r] = att_trans_mat(config, cur_state);
 % if type_opt == "unconstraint"
@@ -12,17 +12,38 @@ function [tgt_fun_value] = tgt_fun_po_im(coeff, cur_state, config, his_obs,...
 % costate_diff = -basis_fun_diff_state'*coeff + loss_diff_state + config.eta*...
 %     nxt_state_diff_cur'*cur_ctl(1);
 % tgt_fun_value = costate_diff'*costate_diff;
-% 
-% else
+
 nxt_state= Simulator(config, cur_state, cur_ctl);
-cur_r = Loss_cal(config, trans_mat, cur_r, cur_ctl, his_obs, J2L_mat, theta_max);
+loss_value = Loss_cal(config, trans_mat, cur_state, cur_r, cur_ctl, J2L_mat,...
+    theta_max, unit_ball_sample, non_zero_count);
+
 if type_value_fun == "V_T"
     tgt_fun_value = config.eta*coeff'*basis_fun(config.wgt_mat*nxt_state)...
-        + cur_r(1);
+        + loss_value(1);
 else
     tgt_fun_value = config.eta*coeff'*basis_fun(config.wgt_mat*nxt_state)...
-        + cur_r(2);
+        + loss_value(2);
 end
 
-% end
+%% --- START OF SeBIL-GNE REGULARIZATION FIX ---
+% Add the regularization penalty term: τ * ||u_current - u_anchor||^2
+% This term "pulls" the new policy towards the last stable policy,
+% preventing divergence.
+
+if type_value_fun == "V_T"
+    % Regularize only the Target's control
+    player_ctl_current = cur_ctl(1 : 2*config.ctl_dim);
+    player_ctl_anchor = lst_ctl(1 : 2*config.ctl_dim);
+else % "V_R"
+    % Regularize only the Recon's control
+    player_ctl_current = cur_ctl(2*config.ctl_dim+1 : end);
+    player_ctl_anchor = lst_ctl(2*config.ctl_dim+1 : end);
+end
+
+divergence_penalty = config.tau_regularization * norm(player_ctl_current - player_ctl_anchor);
+
+%% Combine them into the final objective value
+tgt_fun_value = tgt_fun_value + divergence_penalty;
+% --- END OF FIX ---
+
 end

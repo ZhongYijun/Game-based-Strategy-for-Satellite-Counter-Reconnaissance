@@ -1,16 +1,15 @@
-function [trun_v] = loss_fun(config, state, ctl_seq, his_obs, J2L_mat,...
-    type_value_fun, unit_ball_sample, non_zero_count)
+function [trun_v] = loss_fun(config, state, ctl_seq, J2L_mat, type_value_fun,...
+    unit_ball_sample, non_zero_count)
 %
 cur_state = state;
-% cur_costate = costate;
+
 V_T = 0;
 V_R = 0;
-% opts = optimoptions("fmincon", "Algorithm","sqp");
 
 % cur_ctl_orb_rec = zeros([config.ctl_dim*config.num_rec_sat,1]);
 for i = 1:config.T_sampling
     [trans_mat, cur_r] = att_trans_mat(config, cur_state);
-    % his_obs = his_obs_update(config, cur_r, his_obs);
+
     % cur_ctl_att_tgt = ctl_seq([1:config.ctl_dim, i]);
     % cur_ctl_orb_tgt = ctl_seq([config.ctl_dim+1:2*config.ctl_dim, i]);
 

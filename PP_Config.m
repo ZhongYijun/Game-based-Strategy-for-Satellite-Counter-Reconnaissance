@@ -35,9 +35,10 @@ classdef PP_Config
         num_rec_sat = 1                 % 侦察卫星的个数
         num_payload = 3                 % 目标卫星载荷的个数
         tgt_att_u_max = 10              % 目标卫星姿态发动机最大力矩(nm)
-        tgt_orb_u_max = 0.01            % 目标卫星轨道发动机最大推力加速度
+        tgt_orb_u_max = 0.01             % 目标卫星轨道发动机最大推力加速度
         rec_orb_u_max = [0.01;0.01;0.01]     % 侦察卫星集群轨道发动机最大推力加速度
         q = [-1, -sqrt(3)/2, -sqrt(3)/2; 0, 1/2, -1/2; 0, 0, 0]
+        % q = [-1;0;0]
         % 定义相机矢量在本体坐标系中的位置矢量
         a_mission =[-1; 0; 0]           % 设置轨道坐标系下反映卫星任务连续性的指向
         % 此处以摄像头对地指向来反映卫星的任务连续性(轨道坐标系下)
@@ -53,23 +54,25 @@ classdef PP_Config
         wgt_R1_obs = 10000
         wgt_T2 = 10                     % 任务T2的相对权重
         wgt_T3 = 10                     % 任务T3的相对权重
-        wgt_T4 = 1                      % 任务T4的相对权重
+        wgt_T4 = 10                      % 任务T4的相对权重
         wgt_R1 = 100                    % 任务R1的相对权重
         wgt_R2 = 10                    % 任务R2的相对权重
-        wgt_rel_att_fuel = 0.005;
+        wgt_rel_att_fuel = 0.01;
         wgt_rel_att_loss = 1;
         %% ADP相关参数设置
         cst_flag = 1                    % 约束存在标识符（布尔变量）
-        eta = 1-10^(-4)                 % 设置折扣因子
-        num_sample = 0                  % 设置采样样本个数
-        max_policy_iter = 20            % 设置最大的策略迭代步数
+        eta = 0.95                      % 设置折扣因子
+        num_sample = 0                 % 设置采样样本个数
+        max_policy_iter = 2            % 设置最大的策略迭代步数
         err_tol = 0.01                  % 设置值函数终止迭代容许误差
-        wgt_mat = eye(18)*diag([ones([6,1]);10^(-3)*ones([3,1]);...
-            ones([3,1]);10^(-3)*ones([3,1]); ones([3,1])])
-        max_trust_redius = 100          %设置信赖域半径上界
-        wgt_dis_punish = 1e-4;
+        wgt_mat = eye(24)*diag([ones([6,1]);10^(-4)*ones([3,1]);...
+            10^(-1)*ones([3,1]);10^(-4)*ones([3,1]); 10^(-1)*ones([3,1]);...
+            10^(-4)*ones([3,1]); 10^(-1)*ones([3,1])])
+        max_trust_redius = 0.1         %设置信赖域半径上界
+        wgt_dis_punish = 1e-4
+        tau_regularization = 100
         %% 杂项
-        max_num_ball_sample = 100000;
+        max_num_ball_sample = 10000;
         safe_ang = pi/18;
         max_unchanged = 10;
     end
@@ -95,15 +98,12 @@ classdef PP_Config
            opts = optimoptions('fsolve', 'Algorithm', 'levenberg-marquardt',...
                'MaxFunctionEvaluations', 10000);
            obj.rel_orb_0(1:6, 1) = fsolve(@(cur_state) orb_ini(omega_ref,...
-               cur_state), [0;0;-2500;0;0.5;0], opts);
-           obj.rel_orb_0(1:6, 2) = fsolve(@(cur_state) orb_ini(omega_ref,...
-                cur_state), [0;0;-2400;0;-0.5;0], opts);
-           obj.rel_orb_0(1:6, 3) = fsolve(@(cur_state) orb_ini(omega_ref,...
-                cur_state), [0;0;-2450;0;0;0], opts);
-            % obj.rel_orb_0(1:6, 4) = fsolve(@(cur_state) orb_ini(omega_ref,...
-           %     cur_state), [0;0;2400;0;0;0], opts);
-           % obj.rel_orb_0(1:3,:) = [3000,3000;0,0;0,0];
-           % obj.rel_orb_0(4:6,:) = [0,0.4;-0.4,0;6000*obj.orb_w,6000*obj.orb_w];
+               cur_state), [0;0;-2500;0;0.2;0], opts);
+           % obj.rel_orb_0(1:6, 2) = fsolve(@(cur_state) orb_ini(omega_ref,...
+           %      cur_state), [0;0;-2400;0;-0.2;0], opts);
+           % obj.rel_orb_0(1:6, 3) = fsolve(@(cur_state) orb_ini(omega_ref,...
+           %      cur_state), [0;0;-2450;0;0;0], opts);
+
            A(4, 1) = 3*omega_ref^2; A(6, 6) = -omega_ref^2;
            A(4:6, 1:3) = A(4:6, 1:3)+ 6*obj.mu_*obj.J2*obj.r_e^2/...
                obj.orb_ele(1)^5*diag([1,-0.25,-0.75]);
